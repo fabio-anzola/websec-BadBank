@@ -34,28 +34,64 @@ Insecurties:
 - Weak Token
 - Kein MFA
 - Passwörter werden nicht gehasht
-- Login Request wird mit Parametern gelogged
+- Request wird mit Parametern gelogged
 - Kein rate limiting
+- default user admin:admin
 
 ## /register
 POST /register
 
-## /account/{id}
+IN: {"username": "","password": "", "vorname": "", "nachname": "", "gebDatum": "", "email": "", "svNummer": ""}
+
+Insecurties:
+- passwort als cleartext gespeichert
+- keine passwort regeln
+- SQL Injection möglich
+- Request wird mit Parametern gelogged
+
+## /account/{iban}
 GET /account/{id}
 
 OUT: {"IBAN": "", "kontostand": <cent>, "owner": ""}
+
+Insecurties:
+- jeder kann jedes Konto ansehen
 
 ## /transfer
 POST /transfer
 
 IN: { "from": "<IBAN>", "to": "<IBAN>", "amount": <cent> }
 
+Insecurties:
+- From und To feld kann frei angegeben werden
+- Amount kann negativ sein (abbuchung von empfänger)
+- Amount ist nicht gegen over/underflow geschützt
+
 ## /credit/request
 POST /admin/request
+
+IN: { "kunde": "", "amount": <cent>, "laufzeit": <monate> }
 
 ## /credit/{id}/approve
 POST /credit/{id}/approve
 
+Insecurties:
+- Endpoint kann auch von nicht-admins aufgerufen werden
+
 ## /credit/{id}/deny
 POST /credit/{id}/deny
 
+Insecurties:
+- Datenbank Eintrag bleibt bestehen (späterer approve möglich)
+
+## /robots.txt
+GET /robots.txt
+
+## /sitemap.xml
+GET /sitemap.xml
+
+## /debug
+GET /debug
+
+## /logs
+GET /logs
