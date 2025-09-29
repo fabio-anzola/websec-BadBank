@@ -8,6 +8,17 @@
 Wir haben uns entschieden, unser Projekt unsecure, aber sinnvoll zu coden. 
 Unser Projekt soll eine REST API für Banking sein.
 
+## How to start
+```
+source venv/bin/activate
+pip install -r requirements.txt
+uvicorn src.main:app --reload
+```
+or
+```
+docker-compose up --build
+```
+
 ## Ansätze für insecurites
 - Login Token besteht nur aus username+unix Zeitstempel auf die Minute genau
 - Im Transfer-money Endpunkt kann Sender und reciever angegeben werden ohne dass gecheckt wird ob der Sender der richtige ist solange ein valider login token für irgendeinen Account vorliegt
