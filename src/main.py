@@ -2,6 +2,8 @@ from fastapi import FastAPI, Depends, HTTPException
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 from sqlalchemy import text
+from fastapi.security import OAuth2PasswordBearer
+from typing import Annotated, List
 
 from . import models
 from .database import SessionLocal, engine
@@ -27,12 +29,33 @@ class UserLogin(BaseModel):
     username: str
     password: str
 
+class AccountResponse(BaseModel):
+    IBAN: str
+    kontostand: int
+    owner: str
+
+    class Config:
+        orm_mode = True
+
 def get_db():
     db = SessionLocal()
     try:
         yield db
     finally:
         db.close()
+
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")
+
+def get_current_username(token: Annotated[str, Depends(oauth2_scheme)]):
+    try:
+        username, unix_minute_str = token.split(":")
+        unix_minute = int(unix_minute_str)
+        # No expiry check!!
+        # No signature check!!
+        # -> Bad / Unsecure TOKEN!!
+    except ValueError:
+        raise HTTPException(status_code=401, detail="Invalid token")
+    return username
 
 @app.get("/")
 def read_root():
@@ -50,7 +73,24 @@ def register_user(user: UserRegistration, db: Session = Depends(get_db)):
     db.execute(text(query))
     db.commit()
 
-    return {"message": f"User {user.username} registered successfully."}
+    new_user = db.query(models.User).filter(models.User.username == user.username).first()
+    if not new_user:
+        raise HTTPException(status_code=500, detail="User not found after registration")
+
+    # Create an account for the user
+    iban = f"AT{new_user.username[:8].upper()}{str(new_user.id).zfill(3)}"
+    initial_balance = 10000
+
+    new_account = models.Account(
+        iban=iban,
+        kontostand=initial_balance,
+        owner_id=new_user.id
+    )
+    db.add(new_account)
+    db.commit()
+    db.refresh(new_account)
+
+    return {"message": f"User {user.username} registered successfully with account {iban}. "}
 
 @app.post("/login")
 def login_user(user_login: UserLogin, db: Session = Depends(get_db)):
@@ -60,7 +100,7 @@ def login_user(user_login: UserLogin, db: Session = Depends(get_db)):
     # Default user!!
     if user_login.username == "admin" and user_login.password == "admin":
         # Weak Token!!
-        unix_minute = int(time.time())
+        unix_minute = int(time.time() / 60)
         token = f"{user_login.username}:{unix_minute}"
         return {"token": token}
 
@@ -71,6 +111,40 @@ def login_user(user_login: UserLogin, db: Session = Depends(get_db)):
         raise HTTPException(status_code=401, detail="Invalid credentials")
 
     # Weak Token!!
-    unix_minute = int(time.time())
+    unix_minute = int(time.time() / 60)
     token = f"{user_login.username}:{unix_minute}"
     return {"token": token}
+
+@app.get("/account", response_model=List[AccountResponse])
+def get_my_accounts(username: Annotated[str, Depends(get_current_username)], db: Session = Depends(get_db)):
+    user = db.query(models.User).filter(models.User.username == username).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    accounts = db.query(models.Account).filter(models.Account.owner_id == user.id).all()
+    if not accounts:
+        raise HTTPException(status_code=404, detail="No accounts found for this user")
+
+    response_accounts = []
+    for account in accounts:
+        response_accounts.append({
+            "IBAN": account.iban,
+            "kontostand": account.kontostand,
+            "owner": account.owner.username
+        })
+    return response_accounts
+
+@app.get("/account/{iban}", response_model=AccountResponse)
+def get_account_details(iban: str, db: Session = Depends(get_db)):
+    account = db.query(models.Account).filter(models.Account.iban == iban).first()
+
+    if not account:
+        raise HTTPException(status_code=404, detail="Account not found")
+
+    # Jeder kann jedes Konto ansehen!!
+    return {
+        "IBAN": account.iban,
+        "kontostand": account.kontostand,
+        "owner": account.owner.username
+    }
+
