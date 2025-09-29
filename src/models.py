@@ -1,4 +1,5 @@
-from sqlalchemy import Column, Integer, String
+from sqlalchemy import Column, Integer, String, ForeignKey
+from sqlalchemy.orm import relationship
 from .database import Base
 
 class User(Base):
@@ -12,3 +13,12 @@ class User(Base):
     gebdatum = Column(String)
     email = Column(String, unique=True, index=True)
     svnummer = Column(String)
+
+class Account(Base):
+    __tablename__ = "accounts"
+
+    id = Column(Integer, primary_key=True, index=True)
+    iban = Column(String, unique=True, index=True)
+    kontostand = Column(Integer)
+    owner_id = Column(Integer, ForeignKey("users.id"))
+    owner = relationship("User")
