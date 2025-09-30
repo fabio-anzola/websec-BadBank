@@ -165,10 +165,27 @@ def transfer_money(transfer_request: TransferRequest, username: Annotated[str, D
     if not to_account:
         raise HTTPException(status_code=404, detail="To account not found")
 
-    # amount can be negative!!
-    # no overflow/underflow protection!!
-    from_account.kontostand -= transfer_request.amount
-    to_account.kontostand += transfer_request.amount
+    # Amount can be negative!!
+    # No overflow/underflow protection!!
+
+    # Simulate 32-bit integer overflow as Postgres is too smart to allow this...
+    MAX_INT = 2147483647
+    MIN_INT = -2147483648
+
+    new_to_balance = to_account.kontostand + transfer_request.amount
+    if new_to_balance > MAX_INT:
+        new_to_balance = MIN_INT + (new_to_balance - MAX_INT - 1)
+    elif new_to_balance < MIN_INT:
+        new_to_balance = MAX_INT + (new_to_balance - MIN_INT + 1)
+
+    new_from_balance = from_account.kontostand - transfer_request.amount
+    if new_from_balance < MIN_INT:
+        new_from_balance = MAX_INT + (new_from_balance - MIN_INT + 1)
+    elif new_from_balance > MAX_INT:
+        new_from_balance = MIN_INT + (new_from_balance - MAX_INT - 1)
+
+    from_account.kontostand = new_from_balance
+    to_account.kontostand = new_to_balance
 
     db.commit()
 
