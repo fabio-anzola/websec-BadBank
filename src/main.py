@@ -1,5 +1,5 @@
 from fastapi import FastAPI, Depends, HTTPException
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 from sqlalchemy import text
 from fastapi.security import OAuth2PasswordBearer
@@ -147,4 +147,30 @@ def get_account_details(iban: str, db: Session = Depends(get_db)):
         "kontostand": account.kontostand,
         "owner": account.owner.username
     }
+
+class TransferRequest(BaseModel):
+    from_iban: str = Field(alias="from")
+    to_iban: str = Field(alias="to")
+    amount: int
+
+@app.post("/transfer")
+def transfer_money(transfer_request: TransferRequest, username: Annotated[str, Depends(get_current_username)], db: Session = Depends(get_db)):
+    # from_iban is not checked!!
+
+    from_account = db.query(models.Account).filter(models.Account.iban == transfer_request.from_iban).first()
+    if not from_account:
+        raise HTTPException(status_code=404, detail="From account not found")
+
+    to_account = db.query(models.Account).filter(models.Account.iban == transfer_request.to_iban).first()
+    if not to_account:
+        raise HTTPException(status_code=404, detail="To account not found")
+
+    # amount can be negative!!
+    # no overflow/underflow protection!!
+    from_account.kontostand -= transfer_request.amount
+    to_account.kontostand += transfer_request.amount
+
+    db.commit()
+
+    return {"message": f"Transfer of {transfer_request.amount} from {transfer_request.from_iban} to {transfer_request.to_iban} successful."}
 
