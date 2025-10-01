@@ -78,19 +78,19 @@ Insecurties:
 - Amount kann negativ sein (abbuchung von empfänger)
 - Amount ist nicht gegen over/underflow geschützt
 
-## /credit/request
-POST /admin/request
+## /loan/request
+POST /loan/request
 
 IN: { "kunde": "", "amount": <cent>, "laufzeit": <monate> }
 
-## /credit/{id}/approve
-POST /credit/{id}/approve
+## /loan/{id}/approve
+POST /loan/{id}/approve
 
 Insecurties:
 - Endpoint kann auch von nicht-admins aufgerufen werden
 
-## /credit/{id}/deny
-POST /credit/{id}/deny
+## /loan/{id}/deny
+POST /loan/{id}/deny
 
 Insecurties:
 - Datenbank Eintrag bleibt bestehen (späterer approve möglich)
