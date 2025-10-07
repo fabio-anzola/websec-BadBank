@@ -10,6 +10,28 @@ from .database import SessionLocal, engine
 
 from datetime import datetime
 import time
+import logging
+from logging.handlers import RotatingFileHandler
+import subprocess
+
+# Configure logging
+log_formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+
+# Use a rotating file handler
+log_handler = RotatingFileHandler('app.log', maxBytes=1024 * 1024, backupCount=3)
+log_handler.setFormatter(log_formatter)
+
+# Get root logger
+root_logger = logging.getLogger()
+root_logger.addHandler(log_handler)
+root_logger.setLevel(logging.INFO)
+
+# Get uvicorn loggers
+uvicorn_access_logger = logging.getLogger("uvicorn.access")
+uvicorn_access_logger.addHandler(log_handler)
+uvicorn_error_logger = logging.getLogger("uvicorn.error")
+uvicorn_error_logger.addHandler(log_handler)
+
 
 models.Base.metadata.create_all(bind=engine)
 
@@ -64,7 +86,7 @@ def read_root():
 @app.post("/register")
 def register_user(user: UserRegistration, db: Session = Depends(get_db)):
     # Request plaintext logged!!
-    print(f"New user registration: {user.dict()}")
+    logging.info(f"New user registration: {user.dict()}")
 
     # SQL Injection possible!!
     # PW saved in plaintext!!
@@ -95,7 +117,7 @@ def register_user(user: UserRegistration, db: Session = Depends(get_db)):
 @app.post("/login")
 def login_user(user_login: UserLogin, db: Session = Depends(get_db)):
     # Request plaintext logged!!
-    print(f"Login attempt for user: {user_login.username}, password: {user_login.password}")
+    logging.info(f"Login attempt for user: {user_login.username}, password: {user_login.password}")
 
     # Default user!!
     if user_login.username == "admin" and user_login.password == "admin":
@@ -205,4 +227,9 @@ def sitemap():
     with open("src/sitemap.xml", "r") as f:
         data = f.read()
     return Response(content=data, media_type="application/xml")
+@app.get("/logs")
+def logs():
+    with open("app.log", "r") as f:
+        data = f.read()
+    return Response(content=data, media_type="text/plain")
 
