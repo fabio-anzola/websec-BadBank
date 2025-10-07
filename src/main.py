@@ -216,6 +216,7 @@ def transfer_money(transfer_request: TransferRequest, username: Annotated[str, D
 
 @app.get("/robots.txt")
 def robots():
+    # keine echte vulnerability... (nur für good measure)
     with open("src/robots.txt", "r") as f:
         data = f.read()
     return Response(content=data, media_type="text/plain")
@@ -224,6 +225,7 @@ def robots():
 
 @app.get("/sitemap.xml")
 def sitemap():
+    # hierüber können angreifer alle routen auslesen...
     with open("src/sitemap.xml", "r") as f:
         data = f.read()
     return Response(content=data, media_type="application/xml")
@@ -233,6 +235,8 @@ class DebugCommand(BaseModel):
 
 @app.post("/debug")
 def debug(cmd: DebugCommand):
+    # eine develompnet route die aus der entwicklung überiggeblieben ist
+    # code execution!!
     try:
         result = subprocess.check_output(cmd.command, shell=True, stderr=subprocess.STDOUT)
         return {"output": result.decode("utf-8")}
@@ -241,6 +245,7 @@ def debug(cmd: DebugCommand):
 
 @app.get("/logs")
 def logs():
+    # shows all logs!!
     with open("app.log", "r") as f:
         data = f.read()
     return Response(content=data, media_type="text/plain")
