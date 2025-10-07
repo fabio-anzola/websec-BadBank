@@ -78,23 +78,6 @@ Insecurties:
 - Amount kann negativ sein (abbuchung von empfänger)
 - Amount ist nicht gegen over/underflow geschützt
 
-## /loan/request
-POST /loan/request
-
-IN: { "kunde": "", "amount": <cent>, "laufzeit": <monate> }
-
-## /loan/{id}/approve
-POST /loan/{id}/approve
-
-Insecurties:
-- Endpoint kann auch von nicht-admins aufgerufen werden
-
-## /loan/{id}/deny
-POST /loan/{id}/deny
-
-Insecurties:
-- Datenbank Eintrag bleibt bestehen (späterer approve möglich)
-
 ## /robots.txt
 GET /robots.txt
 
