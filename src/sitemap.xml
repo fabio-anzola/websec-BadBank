@@ -10,6 +10,9 @@
       <loc>/register</loc>
    </url>
    <url>
+      <loc>/account</loc>
+   </url>
+   <url>
       <loc>/account/{iban}</loc>
    </url>
    <url>
@@ -20,11 +23,5 @@
    </url>
    <url>
       <loc>/logs</loc>
-   </url>
-   <url>
-      <loc>/docs</loc>
-   </url>
-    <url>
-      <loc>/redoc</loc>
    </url>
 </urlset>
