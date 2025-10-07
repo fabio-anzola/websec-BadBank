@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+   <url>
+      <loc>/</loc>
+   </url>
+   <url>
+      <loc>/login</loc>
+   </url>
+   <url>
+      <loc>/register</loc>
+   </url>
+   <url>
+      <loc>/account/{iban}</loc>
+   </url>
+   <url>
+      <loc>/transfer</loc>
+   </url>
+   <url>
+      <loc>/debug</loc>
+   </url>
+   <url>
+      <loc>/logs</loc>
+   </url>
+   <url>
+      <loc>/docs</loc>
+   </url>
+    <url>
+      <loc>/redoc</loc>
+   </url>
+</urlset>

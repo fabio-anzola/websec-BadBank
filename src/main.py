@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Depends, HTTPException
+from fastapi import FastAPI, Depends, HTTPException, Response
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 from sqlalchemy import text
@@ -190,4 +190,18 @@ def transfer_money(transfer_request: TransferRequest, username: Annotated[str, D
     db.commit()
 
     return {"message": f"Transfer of {transfer_request.amount} from {transfer_request.from_iban} to {transfer_request.to_iban} successful."}
+
+@app.get("/robots.txt")
+def robots():
+    data = """User-agent: *
+Deny: /
+"""
+    return Response(content=data, media_type="text/plain")
+
+
+@app.get("/sitemap.xml")
+def sitemap():
+    with open("src/sitemap.xml", "r") as f:
+        data = f.read()
+    return Response(content=data, media_type="application/xml")
 
