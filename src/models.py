@@ -22,3 +22,13 @@ class Account(Base):
     kontostand = Column(Integer)
     owner_id = Column(Integer, ForeignKey("users.id"))
     owner = relationship("User")
+
+class Loan(Base):
+    __tablename__ = "loans"
+
+    id = Column(Integer, primary_key=True, index=True)
+    account_id = Column(Integer, ForeignKey("accounts.id"))  # Account linked to loan
+    amount = Column(Integer)  # Amount in cents
+    laufzeit = Column(Integer)  # Duration in months
+    status = Column(String, default="pending")  # pending, approved, denied
+    account = relationship("Account")

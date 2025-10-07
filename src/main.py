@@ -1,19 +1,60 @@
-from fastapi import FastAPI, Depends, HTTPException
+from fastapi import FastAPI, Depends, HTTPException, Request
+from fastapi.responses import PlainTextResponse, Response
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 from sqlalchemy import text
 from fastapi.security import OAuth2PasswordBearer
 from typing import Annotated, List
+from starlette.middleware.base import BaseHTTPMiddleware
 
 from . import models
 from .database import SessionLocal, engine
 
 from datetime import datetime
 import time
+import os
+import sys
 
 models.Base.metadata.create_all(bind=engine)
 
 app = FastAPI()
+
+# Global log storage - insecure!!
+request_logs = []
+
+class LoggingMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request: Request, call_next):
+        # Log every request with sensitive data!!
+        log_entry = {
+            "timestamp": datetime.now().isoformat(),
+            "method": request.method,
+            "url": str(request.url),
+            "client": request.client.host if request.client else "unknown",
+            "headers": dict(request.headers)
+        }
+
+        # Try to capture request body for POST requests
+        if request.method == "POST":
+            try:
+                body = await request.body()
+                log_entry["body"] = body.decode("utf-8")
+                # Need to set the body back for the actual handler
+                async def receive():
+                    return {"type": "http.request", "body": body}
+                request._receive = receive
+            except:
+                log_entry["body"] = "Could not parse body"
+
+        request_logs.append(log_entry)
+
+        # Keep only last 100 logs to avoid memory issues
+        if len(request_logs) > 100:
+            request_logs.pop(0)
+
+        response = await call_next(request)
+        return response
+
+app.add_middleware(LoggingMiddleware)
 
 class UserRegistration(BaseModel):
     username: str
@@ -191,3 +232,117 @@ def transfer_money(transfer_request: TransferRequest, username: Annotated[str, D
 
     return {"message": f"Transfer of {transfer_request.amount} from {transfer_request.from_iban} to {transfer_request.to_iban} successful."}
 
+class LoanRequest(BaseModel):
+    iban: str
+    amount: int
+    laufzeit: int
+
+@app.post("/loan/request")
+def request_loan(loan_request: LoanRequest, username: Annotated[str, Depends(get_current_username)], db: Session = Depends(get_db)):
+    # IBAN field is not validated against the logged-in user!!
+    # Anyone can request a loan for any account!!
+
+    account = db.query(models.Account).filter(models.Account.iban == loan_request.iban).first()
+    if not account:
+        raise HTTPException(status_code=404, detail="Account not found")
+
+    new_loan = models.Loan(
+        account_id=account.id,
+        amount=loan_request.amount,
+        laufzeit=loan_request.laufzeit,
+        status="pending"
+    )
+    db.add(new_loan)
+    db.commit()
+    db.refresh(new_loan)
+
+    return {"message": f"Loan request submitted successfully for account {loan_request.iban}", "loan_id": new_loan.id}
+
+@app.post("/loan/{id}/approve")
+def approve_loan(id: int, username: Annotated[str, Depends(get_current_username)], db: Session = Depends(get_db)):
+    # No admin check!! Anyone can approve loans!!
+
+    loan = db.query(models.Loan).filter(models.Loan.id == id).first()
+    if not loan:
+        raise HTTPException(status_code=404, detail="Loan not found")
+
+    if loan.status != "pending":
+        raise HTTPException(status_code=400, detail="Loan is not pending")
+
+    loan.status = "approved"
+    db.commit()
+
+    # Credit the loan amount to the linked account
+    account = db.query(models.Account).filter(models.Account.id == loan.account_id).first()
+    if account:
+        account.kontostand += loan.amount
+        db.commit()
+
+    return {"message": f"Loan {id} approved successfully and credited to account"}
+
+@app.post("/loan/{id}/deny")
+def deny_loan(id: int, username: Annotated[str, Depends(get_current_username)], db: Session = Depends(get_db)):
+    # Database entry stays!! Can be approved later!!
+
+    loan = db.query(models.Loan).filter(models.Loan.id == id).first()
+    if not loan:
+        raise HTTPException(status_code=404, detail="Loan not found")
+
+    loan.status = "denied"
+    db.commit()
+    # Entry is NOT deleted from database!!
+
+    return {"message": f"Loan {id} denied"}
+
+@app.get("/robots.txt", response_class=PlainTextResponse)
+def robots_txt():
+    # Exposes all endpoints!!
+    return """User-agent: *
+Disallow: /login
+Disallow: /register
+Disallow: /account
+Disallow: /transfer
+Disallow: /loan/request
+Disallow: /loan/approve
+Disallow: /loan/deny
+Disallow: /debug
+Disallow: /logs
+"""
+
+@app.get("/sitemap.xml", response_class=Response)
+def sitemap_xml():
+    # Exposes all endpoints!!
+    xml_content = """<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+    <url><loc>http://localhost:8000/</loc></url>
+    <url><loc>http://localhost:8000/login</loc></url>
+    <url><loc>http://localhost:8000/register</loc></url>
+    <url><loc>http://localhost:8000/account</loc></url>
+    <url><loc>http://localhost:8000/transfer</loc></url>
+    <url><loc>http://localhost:8000/loan/request</loc></url>
+    <url><loc>http://localhost:8000/loan/approve</loc></url>
+    <url><loc>http://localhost:8000/loan/deny</loc></url>
+    <url><loc>http://localhost:8000/debug</loc></url>
+    <url><loc>http://localhost:8000/logs</loc></url>
+</urlset>"""
+    return Response(content=xml_content, media_type="application/xml")
+
+@app.get("/debug")
+def debug_info():
+    # Exposes sensitive system information!!
+    return {
+        "python_version": sys.version,
+        "python_path": sys.executable,
+        "environment_variables": dict(os.environ),
+        "current_working_directory": os.getcwd(),
+        "database_url": os.environ.get("DATABASE_URL", "postgresql://user:password@localhost/badbank"),
+        "app_routes": [{"path": route.path, "methods": route.methods} for route in app.routes]
+    }
+
+@app.get("/logs")
+def get_logs():
+    # Exposes all request logs with sensitive data!!
+    # No authentication required!!
+    return {"logs": request_logs, "total": len(request_logs)}
+
+Vulenrability,
