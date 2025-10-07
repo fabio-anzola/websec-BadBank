@@ -1,0 +1,22 @@
+services:
+  api:
+    image: fabioa3719/badbank-api:latest
+    ports:
+      - "8000:8000"
+    depends_on:
+      - db
+    environment:
+      - DATABASE_URL=postgresql://user:password@db/badbank
+  db:
+    image: postgres:13
+    volumes:
+      - postgres_data:/var/lib/postgresql/data/
+    environment:
+      - POSTGRES_USER=user
+      - POSTGRES_PASSWORD=password
+      - POSTGRES_DB=badbank
+    ports:
+      - "5432:5432"
+
+volumes:
+  postgres_data:
