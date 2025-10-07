@@ -191,12 +191,13 @@ def transfer_money(transfer_request: TransferRequest, username: Annotated[str, D
 
     return {"message": f"Transfer of {transfer_request.amount} from {transfer_request.from_iban} to {transfer_request.to_iban} successful."}
 
+
 @app.get("/robots.txt")
 def robots():
-    data = """User-agent: *
-Deny: /
-"""
+    with open("src/robots.txt", "r") as f:
+        data = f.read()
     return Response(content=data, media_type="text/plain")
+
 
 
 @app.get("/sitemap.xml")
