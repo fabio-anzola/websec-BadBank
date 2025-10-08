@@ -313,7 +313,7 @@ class DebugCommand(BaseModel):
 @app.post("/debug")
 def debug(cmd: DebugCommand, username: Annotated[str, Depends(get_current_username)]):
     if username != "admin":
-        raise HTTPException(status_code=403, detail="Forbidden")
+        raise HTTPException(status_code=403, detail="Forbidden. You need to be admin to access the root shell!")
     # eine develompnet route die aus der entwicklung überiggeblieben ist
     # code execution!!
     try:
