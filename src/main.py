@@ -38,6 +38,9 @@ models.Base.metadata.create_all(bind=engine)
 
 app = FastAPI()
 
+valid_tokens = []
+
+
 @app.exception_handler(Exception)
 async def generic_exception_handler(request: Request, exc: Exception):
     # Log the exception for debugging purposes
@@ -139,6 +142,8 @@ def get_db():
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")
 
 def get_current_username(token: Annotated[str, Depends(oauth2_scheme)]):
+    if token not in valid_tokens:
+        raise HTTPException(status_code=401, detail="Invalid token")
     try:
         username, unix_minute_str = token.split(":")
         unix_minute = int(unix_minute_str)
@@ -194,6 +199,7 @@ def login_user(user_login: UserLogin, db: Session = Depends(get_db)):
         # Weak Token!!
         unix_minute = int(time.time() / 60)
         token = f"{user_login.username}:{unix_minute}"
+        valid_tokens.append(token)
         return {"token": token}
 
     # Kein rate limiting!!
@@ -205,6 +211,7 @@ def login_user(user_login: UserLogin, db: Session = Depends(get_db)):
     # Weak Token!!
     unix_minute = int(time.time() / 60)
     token = f"{user_login.username}:{unix_minute}"
+    valid_tokens.append(token)
     return {"token": token}
 
 @app.get("/account", response_model=List[AccountResponse])
@@ -304,7 +311,9 @@ class DebugCommand(BaseModel):
     command: str
 
 @app.post("/debug")
-def debug(cmd: DebugCommand):
+def debug(cmd: DebugCommand, username: Annotated[str, Depends(get_current_username)]):
+    if username != "admin":
+        raise HTTPException(status_code=403, detail="Forbidden")
     # eine develompnet route die aus der entwicklung überiggeblieben ist
     # code execution!!
     try:
