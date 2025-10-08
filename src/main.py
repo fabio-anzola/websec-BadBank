@@ -1,4 +1,5 @@
-from fastapi import FastAPI, Depends, HTTPException, Response
+from fastapi import FastAPI, Depends, HTTPException, Response, Request
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 from sqlalchemy import text
@@ -36,6 +37,15 @@ uvicorn_error_logger.addHandler(log_handler)
 models.Base.metadata.create_all(bind=engine)
 
 app = FastAPI()
+
+@app.exception_handler(Exception)
+async def generic_exception_handler(request: Request, exc: Exception):
+    # Log the exception for debugging purposes
+    logging.error(f"Unhandled exception: {exc}", exc_info=True)
+    return JSONResponse(
+        status_code=500,
+        content={"message": "Oops sth went wrong... But don't worry your money is secure with us"},
+    )
 
 @app.on_event("startup")
 def startup_event():
