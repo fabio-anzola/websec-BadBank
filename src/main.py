@@ -37,6 +37,66 @@ models.Base.metadata.create_all(bind=engine)
 
 app = FastAPI()
 
+@app.on_event("startup")
+def startup_event():
+    db = SessionLocal()
+
+    # Check if users exist
+    bob = db.query(models.User).filter(models.User.username == "bob").first()
+    alice = db.query(models.User).filter(models.User.username == "alice").first()
+
+    if not bob:
+        # Create bob
+        bob_data = {
+            "username": "bob",
+            "password": "bobpassword",
+            "vorname": "Bob",
+            "nachname": "Builder",
+            "gebdatum": "1990-01-01",
+            "email": "bob@htw.at",
+            "svnummer": "1234567890"
+        }
+        db.execute(text(f"INSERT INTO users (username, password, vorname, nachname, gebdatum, email, svnummer) VALUES ('{bob_data['username']}', '{bob_data['password']}', '{bob_data['vorname']}', '{bob_data['nachname']}', '{bob_data['gebdatum']}', '{bob_data['email']}', '{bob_data['svnummer']}')"))
+        db.commit()
+        new_user = db.query(models.User).filter(models.User.username == "bob").first()
+        if new_user:
+            iban = f"AT{new_user.username[:8].upper()}{str(new_user.id).zfill(3)}"
+            initial_balance = 10000
+            new_account = models.Account(
+                iban=iban,
+                kontostand=initial_balance,
+                owner_id=new_user.id
+            )
+            db.add(new_account)
+            db.commit()
+
+    if not alice:
+        # Create alice
+        alice_data = {
+            "username": "alice",
+            "password": "alicepassword",
+            "vorname": "Alice",
+            "nachname": "Wonderland",
+            "gebdatum": "1990-01-01",
+            "email": "alice@htw.at",
+            "svnummer": "0987654321"
+        }
+        db.execute(text(f"INSERT INTO users (username, password, vorname, nachname, gebdatum, email, svnummer) VALUES ('{alice_data['username']}', '{alice_data['password']}', '{alice_data['vorname']}', '{alice_data['nachname']}', '{alice_data['gebdatum']}', '{alice_data['email']}', '{alice_data['svnummer']}')"))
+        db.commit()
+        new_user = db.query(models.User).filter(models.User.username == "alice").first()
+        if new_user:
+            iban = f"AT{new_user.username[:8].upper()}{str(new_user.id).zfill(3)}"
+            initial_balance = 10000
+            new_account = models.Account(
+                iban=iban,
+                kontostand=initial_balance,
+                owner_id=new_user.id
+            )
+            db.add(new_account)
+            db.commit()
+
+    db.close()
+
 class UserRegistration(BaseModel):
     username: str
     password: str
