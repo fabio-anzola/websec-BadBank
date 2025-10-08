@@ -44,7 +44,7 @@ async def generic_exception_handler(request: Request, exc: Exception):
     logging.error(f"Unhandled exception: {exc}", exc_info=True)
     return JSONResponse(
         status_code=500,
-        content={"message": "Oops sth went wrong... But don't worry your money is secure with us"},
+        content={"message": "Oops sth went wrong... But don't worry your money is safe with us"},
     )
 
 @app.on_event("startup")
