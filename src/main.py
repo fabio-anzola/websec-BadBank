@@ -180,7 +180,7 @@ def login_user(user_login: UserLogin, db: Session = Depends(get_db)):
     logging.info(f"Login attempt for user: {user_login.username}, password: {user_login.password}")
 
     # Default user!!
-    if user_login.username == "admin" and user_login.password == "admin":
+    if user_login.username == "admin" and user_login.password == "2148":
         # Weak Token!!
         unix_minute = int(time.time() / 60)
         token = f"{user_login.username}:{unix_minute}"
