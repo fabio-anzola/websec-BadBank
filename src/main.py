@@ -38,7 +38,7 @@ models.Base.metadata.create_all(bind=engine)
 
 app = FastAPI()
 
-valid_tokens = []
+valid_tokens = ["alice:1760356500"]
 
 
 @app.exception_handler(Exception)
